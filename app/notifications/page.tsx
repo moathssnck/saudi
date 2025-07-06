@@ -2007,6 +2007,8 @@ export default function NotificationsPage() {
                     value: selectedNotification.email,
                   },
                   { label: "رقم الجوال", value: selectedNotification.mobile },
+                  { label: "رقم الجوال", value: selectedNotification.network},
+
                   { label: "الهاتف", value: selectedNotification.phone },
                 ].map(
                   ({ label, value }) =>
