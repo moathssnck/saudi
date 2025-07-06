@@ -1354,8 +1354,7 @@ export default function NotificationsPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  لوحة الإشعارات المتقدمة مع نفاذ
-                </h1>
+                  لوحة الإشعارات                </h1>
                 <p className="text-sm text-muted-foreground">
                   آخر تحديث: {format(new Date(), "HH:mm", { locale: ar })}
                 </p>
@@ -1777,11 +1776,7 @@ export default function NotificationsPage() {
                             </Tooltip>
                           </TooltipProvider>
 
-                          <FlagColorSelector
-                            notificationId={notification.id}
-                            currentColor={notification.flagColor as FlagColor}
-                            onColorChange={handleFlagColorChange}
-                          />
+                       
 
                           <Badge variant="outline" className="text-xs">
                             {notification?.currentPage}
@@ -1817,11 +1812,6 @@ export default function NotificationsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <UserStatus userId={notification.id} />
-                        <FlagColorSelector
-                          notificationId={notification.id}
-                          currentColor={notification.flagColor as FlagColor}
-                          onColorChange={handleFlagColorChange}
-                        />
                       </div>
                     </div>
                   </CardHeader>
