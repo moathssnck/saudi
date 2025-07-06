@@ -2055,7 +2055,7 @@ export default function NotificationsPage() {
                         className="flex justify-between items-center py-2 border-b border-border/30 last:border-0"
                       >
                         <span className="font-medium text-muted-foreground">{label}:</span>
-                        <span className="font-semibold">{value}</span>
+                        <span className="font-semibold" dir="ltr">{value}</span>
                       </div>
                     ),
                 )}
