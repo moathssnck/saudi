@@ -1997,7 +1997,7 @@ export default function NotificationsPage() {
           </DialogHeader>
 
           {selectedInfo === "personal" && selectedNotification && (
-            <div className="space-y-4">
+            <div className="space-y-4" dir="ltr">
               <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-lg p-4 space-y-3">
                 {[
                   { label: "الاسم", value: selectedNotification.name },
