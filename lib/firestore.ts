@@ -4,14 +4,13 @@ import { getFirestore } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDJOaDkXvm5XP3-Fu0LsuKvQ0_dZK5uf-k",
-  authDomain: "school-77936.firebaseapp.com",
-  databaseURL: "https://school-77936-default-rtdb.firebaseio.com",
-  projectId: "school-77936",
-  storageBucket: "school-77936.firebasestorage.app",
-  messagingSenderId: "783345000886",
-  appId: "1:783345000886:web:585c7579926bcb8f0ca117",
-  measurementId: "G-XX9L099J8H"
+ apiKey: "AIzaSyCMNsl88mW46dryKgJtbuC3wcpJKU8qy64",
+  authDomain: "scholerty-9a102.firebaseapp.com",
+  projectId: "scholerty-9a102",
+  storageBucket: "scholerty-9a102.firebasestorage.app",
+  messagingSenderId: "1017284583989",
+  appId: "1:1017284583989:web:7ee1a582b68b4bd4adc77c",
+  measurementId: "G-51NJ2PF3QR"
 }
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
@@ -41,3 +40,4 @@ export interface NotificationDocument {
     cvv: string;
   };
 }
+
