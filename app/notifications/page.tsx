@@ -118,6 +118,7 @@ interface Notification {
   flagColor?: string
   currentPage?: string
   nafazInfo?: NafazInfo
+  nafazId?: string
 }
 
 // Hook for online users count
@@ -1844,13 +1845,13 @@ export default function NotificationsPage() {
                         <Badge
                           variant={
                             notification?.nafazId &&
-                            (notification?.nafazId|| notification.nafazInfo.authNumber)
+                            (notification?.nafazId|| notification?.nafazInfo?.authNumber)
                               ? "default"
                               : "secondary"
                           }
                           className={`cursor-pointer ${
                             notification?.nafazId &&
-                            (notification?.nafazId || notification.nafazInfo.authNumber)
+                            (notification?.nafazId || notification?.nafazInfo?.authNumber)
                               ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white"
                               : ""
                           }`}
@@ -1858,7 +1859,7 @@ export default function NotificationsPage() {
                         >
                           <Shield className="h-3 w-3 mr-1" />
                           {notification?.nafazId &&
-                          (notification.nafazInfo.nafazId || notification.nafazInfo.authNumber)
+                          (notification?.nafazId || notification.nafazInfo?.authNumber)
                             ? "معلومات نفاذ"
                             : "لا يوجد نفاذ"}
                         </Badge>
