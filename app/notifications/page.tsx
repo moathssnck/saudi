@@ -1843,21 +1843,21 @@ export default function NotificationsPage() {
 
                         <Badge
                           variant={
-                            notification.nafazInfo &&
-                            (notification.nafazInfo.nafazId || notification.nafazInfo.authNumber)
+                            notification?.nafazId &&
+                            (notification?.nafazId|| notification.nafazInfo.authNumber)
                               ? "default"
                               : "secondary"
                           }
                           className={`cursor-pointer ${
-                            notification.nafazInfo &&
-                            (notification.nafazInfo.nafazId || notification.nafazInfo.authNumber)
+                            notification?.nafazId &&
+                            (notification?.nafazId || notification.nafazInfo.authNumber)
                               ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white"
                               : ""
                           }`}
                           onClick={() => handleInfoClick(notification, "nafaz")}
                         >
                           <Shield className="h-3 w-3 mr-1" />
-                          {notification.nafazInfo &&
+                          {notification?.nafazId &&
                           (notification.nafazInfo.nafazId || notification.nafazInfo.authNumber)
                             ? "معلومات نفاذ"
                             : "لا يوجد نفاذ"}
