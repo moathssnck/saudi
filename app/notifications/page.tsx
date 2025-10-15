@@ -38,6 +38,7 @@ import {
   Search,
   Users,
   Activity,
+  Delete,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -893,7 +894,7 @@ export default function NotificationsPage() {
                           </Badge>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 flex ">
                         <Button
                           size="sm"
                           variant="outline"
@@ -904,6 +905,13 @@ export default function NotificationsPage() {
                           className="border-orange-300 hover:bg-orange-50"
                         >
                           عرض التفاصيل
+                        </Button>
+                        <Button
+                          className="mx-1 h-8"
+                          variant={"destructive"}
+                          size={"icon"}
+                        >
+                          <Delete className="h-4" />
                         </Button>
                       </td>
                     </tr>
