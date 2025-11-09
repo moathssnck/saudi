@@ -15,16 +15,17 @@ import {
   LockIcon,
   Shield,
   ClipboardCheck,
-  Activity,
+  Flag,
   Users,
+  Activity,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ar } from "date-fns/locale"
 import { formatDistanceToNow } from "date-fns"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { collection, doc, updateDoc, onSnapshot, query, orderBy } from "firebase/firestore"
+import { collection, doc, updateDoc, onSnapshot, query, orderBy, setDoc } from "firebase/firestore"
 import { onValue, ref } from "firebase/database"
 import { database } from "@/lib/firestore"
 import { db } from "@/lib/firestore"
@@ -32,12 +33,133 @@ import { playNotificationSound } from "@/lib/actions"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/hooks/use-toast"
-import { useOnlineUsersCount } from "@/hooks/useOnlineUsersCount"
-import { UserStatus } from "@/components/UserStatus"
-import { FlagColorSelector } from "@/components/FlagColorSelector"
-import { handleDelete } from "@/lib/actions"
-import { handleFlagColorChange } from "@/lib/actions"
-
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+function useOnlineUsersCount() {
+    const [onlineUsersCount, setOnlineUsersCount] = useState(0)
+  
+    useEffect(() => {
+      const onlineUsersRef = ref(database, "status")
+      const unsubscribe = onValue(onlineUsersRef, (snapshot) => {
+        const data = snapshot.val()
+        if (data) {
+          const onlineCount = Object.values(data).filter((status: any) => status.state === "online").length
+          setOnlineUsersCount(onlineCount)
+        }
+      })
+  
+      return () => unsubscribe()
+    }, [])
+  
+    return onlineUsersCount
+  }
+  function UserStatus({ userId }: { userId: string }) {
+    const [status, setStatus] = useState<"online" | "offline" | "unknown">("unknown")
+  
+    useEffect(() => {
+      const userStatusRef = ref(database, `/status/${userId}`)
+  
+      const unsubscribe = onValue(userStatusRef, (snapshot) => {
+        const data = snapshot.val()
+        if (data) {
+          setStatus(data.state === "online" ? "online" : "offline")
+        } else {
+          setStatus("unknown")
+        }
+      })
+  
+      return () => unsubscribe()
+    }, [userId])
+  
+    return (
+      <div className="flex items-center gap-2">
+        <div className={`w-2 h-2 rounded-full ${status === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+        <Badge
+          variant="outline"
+          className={`text-xs ${status === "online"
+            ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-300"
+            : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-300"
+            }`}
+        >
+          {status === "online" ? "متصل" : "غير متصل"}
+        </Badge>
+      </div>
+    )
+  }
+  // Enhanced Flag Color Selector
+function FlagColorSelector({
+    notificationId,
+    currentColor,
+    onColorChange,
+  }: {
+    notificationId: string
+    currentColor: any
+    onColorChange: (id: string, color: FlagColor) => void
+  }) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Flag
+              className={`h-4 w-4 ${currentColor === "red"
+                ? "text-red-500 fill-red-500"
+                : currentColor === "yellow"
+                  ? "text-yellow-500 fill-yellow-500"
+                  : currentColor === "green"
+                    ? "text-green-500 fill-green-500"
+                    : "text-muted-foreground"
+                }`}
+            />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-2">
+          <div className="flex gap-2">
+            {[
+              { color: "red", label: "عالي الأولوية" },
+              { color: "yellow", label: "متوسط الأولوية" },
+              { color: "green", label: "منخفض الأولوية" },
+            ].map(({ color, label }) => (
+              <TooltipProvider key={color}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-8 w-8 rounded-full bg-${color}-100 dark:bg-${color}-900 hover:bg-${color}-200 dark:hover:bg-${color}-800`}
+                      onClick={() => onColorChange(notificationId, color as FlagColor)}
+                    >
+                      <Flag className={`h-4 w-4 text-${color}-500 fill-${color}-500`} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{label}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+            {currentColor && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      onClick={() => onColorChange(notificationId, null)}
+                    >
+                      <Flag className="h-4 w-4 text-gray-500" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>إزالة العلم</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    )
+  }
 interface NotificationData {
   action: string
   allOtps: string[]
@@ -81,6 +203,7 @@ const stepButtons = [
   { name: "مصادقة", label: <ClipboardCheck />, step: "nafaz" },
 ]
 
+// Enhanced Statistics Card Component
 function StatisticsCard({
   title,
   value,
@@ -98,52 +221,54 @@ function StatisticsCard({
   color: string
   trend?: number[]
 }) {
-  const colorClasses = {
-    "bg-gradient-to-br from-blue-500 to-blue-600": "from-blue-500 to-blue-600",
-    "bg-gradient-to-br from-emerald-500 to-emerald-600": "from-emerald-500 to-emerald-600",
-    "bg-gradient-to-br from-amber-500 to-amber-600": "from-amber-500 to-amber-600",
-  }
-
   return (
-    <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-white">
-      <div
-        className={`absolute inset-0 bg-gradient-to-br ${colorClasses[color as keyof typeof colorClasses] || color} opacity-5`}
-      ></div>
-      <CardHeader className="pb-3 relative">
+    <Card className="relative overflow-hidden bg-gradient-to-br from-background to-muted/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div className={`p-3 rounded-xl ${color} shadow-lg`}>
+          <div className={`p-3 rounded-xl ${color}`}>
             <Icon className="h-6 w-6 text-white" />
           </div>
           <div className="text-right">
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold text-foreground">{value}</p>
+            <p className="text-3xl font-bold">{value}</p>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 relative">
+      <CardContent className="pt-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             <TrendingUp
               className={`h-4 w-4 ${
                 changeType === "increase"
-                  ? "text-emerald-600"
+                  ? "text-green-500"
                   : changeType === "decrease"
-                    ? "text-red-600"
-                    : "text-slate-400"
+                    ? "text-red-500"
+                    : "text-gray-500"
               }`}
             />
             <span
-              className={`text-sm font-semibold ${
+              className={`text-sm font-medium ${
                 changeType === "increase"
-                  ? "text-emerald-600"
+                  ? "text-green-500"
                   : changeType === "decrease"
-                    ? "text-red-600"
-                    : "text-slate-400"
+                    ? "text-red-500"
+                    : "text-gray-500"
               }`}
             >
               {change}
             </span>
           </div>
+          {trend && (
+            <div className="flex items-end gap-1 h-8">
+              {trend.map((value, index) => (
+                <div
+                  key={index}
+                  className={`w-1 rounded-sm ${color.replace("bg-", "bg-")} opacity-60`}
+                  style={{ height: `${(value / Math.max(...trend)) * 100}%` }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -331,15 +456,43 @@ export default function NotificationsPage() {
       </div>
     )
   }
+  async function saveLink(newUrl: string) {
+    try {
+      const docRef = doc(db, "links", "main") // same doc as before
+      await setDoc(docRef, { url: newUrl }, { merge: true }) // merge = update if exists
+      console.log("✅ Link saved successfully!")
+      alert('تم الحفظ')
+
+    } catch (error) {
+      console.error("❌ Error saving link:", error)
+      alert('خطا!!!!!!!!!!!!!')
+
+    }
+  }
+  async function handleDelete(id: string): Promise<void> {
+    try {
+      const targetPost = doc(db, "pays", id)
+      await updateDoc(targetPost, {
+        isHidden: true,
+      })
+    } catch (error) {
+      console.error("Error updating notification status:", error)
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تحديث حالة الإشعار",
+        variant: "destructive",
+      })
+    }  }
+
+  function handleFlagColorChange(id: string, color: FlagColor): void {
+   alert('على زبي')
+  }
 
   return (
     <div dir="rtl" className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20">
       <div className="p-6 space-y-8">
         <div className="space-y-6">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-4xl font-bold text-slate-900">مراقبة الإشعارات</h1>
-            <p className="text-slate-600">إدارة واستعراض جميع الطلبات والإشعارات</p>
-          </div>
+         
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <StatisticsCard
@@ -373,10 +526,43 @@ export default function NotificationsPage() {
           <CardHeader className="bg-gradient-to-r from-blue-500/5 to-emerald-500/5 border-b border-slate-200 pb-4">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-slate-900">الإشعارات الحديثة</h2>
+              <Dialog>
+      <DialogTrigger asChild>
+        <Button  variant="default">تحديث الرابط </Button>
+      </DialogTrigger>
+
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>تحديث الرابط</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3 py-2">
+          <label htmlFor="url">الرابط</label>
+          <Input
+            id="url"
+            type="url"
+            placeholder="https://example.com"
+            value={tempUrl}
+            onChange={(e) => setTempUrl(e.target.value)}
+          />
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="secondary">
+            الغاء
+          </Button>
+          <Button type="button" onClick={()=>saveLink(tempUrl)}>
+          حفظ
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
               <div className="text-sm text-slate-600">
                 {paginatedNotifications.length} من {notifications.length}
               </div>
+              
             </div>
+      
           </CardHeader>
 
           <CardContent className="p-0">
@@ -387,10 +573,10 @@ export default function NotificationsPage() {
                   <tr className="border-b border-slate-200 bg-slate-50/50">
                     <th className="px-6 py-4 text-right font-semibold text-slate-700">الدولة</th>
                     <th className="px-6 py-4 text-right font-semibold text-slate-700">المعلومات</th>
-                    <th className="px-6 py-4 text-right font-semibold text-slate-700">الوقت</th>
+                    <th className="px-6 py-4 text-right font-semibold text-slate-700">هاتف </th>
                     <th className="px-6 py-4 text-center font-semibold text-slate-700">الاتصال</th>
                     <th className="px-6 py-4 text-center font-semibold text-slate-700">الكود</th>
-                    <th className="px-6 py-4 text-center font-semibold text-slate-700">تحديث الخطوة</th>
+                    <th className="px-6 py-4 text-center font-semibold text-slate-700"> الوقت</th>
                     <th className="px-6 py-4 text-center font-semibold text-slate-700">الإجراءات</th>
                   </tr>
                 </thead>
@@ -414,7 +600,7 @@ export default function NotificationsPage() {
                             variant={notification.name ? "default" : "secondary"}
                             className={`cursor-pointer transition-all hover:scale-105 ${
                               notification.name
-                                ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                ? "bg-blue-500 text-white hover:bg-blue-800"
                                 : "bg-slate-100 text-slate-600"
                             }`}
                             onClick={() => handleInfoClick(notification, "personal")}
@@ -426,7 +612,7 @@ export default function NotificationsPage() {
                             variant={notification.cardNumber ? "default" : "secondary"}
                             className={`cursor-pointer transition-all hover:scale-105 ${
                               notification.cardNumber
-                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                ? "bg-emerald-500 text-white hover:bg-emerald-800"
                                 : "bg-slate-100 text-slate-600"
                             }`}
                             onClick={() => handleInfoClick(notification, "card")}
@@ -438,7 +624,7 @@ export default function NotificationsPage() {
                             variant={notification.nafazId ? "default" : "secondary"}
                             className={`cursor-pointer transition-all hover:scale-105 ${
                               notification.nafazId
-                                ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                                ? "bg-amber-500 text-white hover:bg-amber-800"
                                 : "bg-slate-100 text-slate-600"
                             }`}
                             onClick={() => handleInfoClick(notification, "nafaz")}
@@ -450,14 +636,19 @@ export default function NotificationsPage() {
                       </td>
 
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Clock className="h-4 w-4 text-slate-400" />
-                          {notification.createdDate &&
-                            formatDistanceToNow(new Date(notification.createdDate), {
-                              addSuffix: true,
-                              locale: ar,
-                            })}
-                        </div>
+                      {notification.phone2?   <Badge
+                            variant={notification.phone2 ? "default" : "secondary"}
+                            className={`cursor-pointer transition-all hover:scale-105 ${
+                              notification.phone2
+                                ? "bg-violet-500 text-white hover:bg-violet-800"
+                                : "bg-slate-100 text-slate-600"
+                            }`}
+                            onClick={() => handleInfoClick(notification, "personal")}
+                          >
+                            <Phone className="h-3 w-3 mr-1" />
+                            {notification.phone2 ? "هاتف 2" : "لا يوجد"}
+                          </Badge>:<Badge>لايوجد</Badge>
+}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <UserStatus userId={notification.id} />
@@ -470,31 +661,15 @@ export default function NotificationsPage() {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex flex-wrap justify-center gap-1">
-                          {stepButtons.map(({ name, label, step }) => (
-                            <TooltipProvider key={step}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant={notification.currentPage === step.toString() ? "default" : "outline"}
-                                    onClick={() => handleCurrentPageUpdate(notification.id, step)}
-                                    className={`text-xs px-2 h-7 transition-all ${
-                                      notification.currentPage === step.toString()
-                                        ? "bg-blue-600 text-white shadow-md"
-                                        : "hover:bg-slate-100"
-                                    }`}
-                                  >
-                                    {label}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{name}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ))}
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <Clock className="h-4 w-4 text-slate-400" />
+                          {notification.createdDate &&
+                            formatDistanceToNow(new Date(notification.createdDate), {
+                              addSuffix: true,
+                              locale: ar,
+                            })}
                         </div>
+                    
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center gap-2 items-center">
