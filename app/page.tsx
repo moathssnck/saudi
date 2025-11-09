@@ -110,6 +110,7 @@ export default function LoginPage() {
                   />
                   <Button
                     type="button"
+                    variant="ghost"
                     size="sm"
                     className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent hover:text-green-500"
                     onClick={() => setShowPassword(!showPassword)}
