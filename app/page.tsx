@@ -56,12 +56,12 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
           <div className="bg-white/10 p-4 rounded-full">
-            <User className="h-12 w-12 text-green-500" />
+            <User className="h-12 w-12 text-blue-500" />
           </div>
         </div>
 
         <Card className="border-0 shadow-xl bg-gray-800 text-white overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-emerald-600"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-emerald-600"></div>
 
           <CardHeader className="space-y-1 text-center pt-8">
             <CardTitle className="text-2xl font-bold text-white">تسجيل الدخول</CardTitle>
@@ -112,7 +112,7 @@ export default function LoginPage() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent hover:text-green-500"
+                    className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent hover:text-blue-500"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
@@ -128,7 +128,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-md transition-all duration-200 flex items-center justify-center gap-2"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-md transition-all duration-200 flex items-center justify-center gap-2"
                 disabled={isLoading}
               >
                 {isLoading ? (
