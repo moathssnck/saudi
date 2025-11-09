@@ -695,6 +695,9 @@ export default function NotificationsPage() {
                             currentColor={notification?.flagColor}
                             onColorChange={handleFlagColorChange}
                           />
+                          <Badge variant={'outline'}>
+                            {notification?.currentPage}
+                          </Badge>
                         </div>
                       </td>
                     </tr>
